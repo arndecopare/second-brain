@@ -1,0 +1,10 @@
+import streamlit as st
+
+st.title("Second Brain")
+
+note = st.text_area("Write a note")
+
+if st.button("Save"):
+    st.success("Note saved!")
+    st.write(note)
+
