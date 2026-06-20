@@ -1,5 +1,6 @@
 import json
 import os
+from datetime import datetime
 import streamlit as st
 
 NOTES_FILE = "data/notes.json"
@@ -25,6 +26,7 @@ def save_note(title, content):
         {
             "title": title,
             "content": content,
+            "created_at": datetime.now().strftime("%Y-%m-%dT%H:%M:%S"),
         }
     )
 
@@ -40,8 +42,16 @@ st.divider()
 
 st.header("My notes")
 
+search = st.text_input("Search", placeholder="Search by title or content...")
+
 notes = load_notes()
 
-for note in reversed(notes):
+filtered_notes = [
+    note for note in notes
+    if search.lower() in note["title"].lower() or search.lower() in note["content"].lower()
+] if search else notes
+
+for note in reversed(filtered_notes):
     st.subheader(note["title"])
+    st.caption(note.get("created_at", "—"))
     st.write(note["content"])
