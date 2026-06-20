@@ -1,5 +1,6 @@
 import json
 import os
+import uuid
 from datetime import datetime
 import streamlit as st
 
@@ -24,15 +25,37 @@ def save_note(title, content):
 
     notes.append(
         {
+            "id": str(uuid.uuid4()),
             "title": title,
             "content": content,
             "created_at": datetime.now().strftime("%Y-%m-%dT%H:%M:%S"),
+            "status": "active",
         }
     )
 
     with open(NOTES_FILE, "w", encoding="utf-8") as f:
         json.dump(notes, f, ensure_ascii=False, indent=2)
 
+def archive_note(note_id):
+    notes = load_notes()
+
+    for note in notes:
+        if note["id"] == note_id:
+            note["status"] = "archived"
+
+    with open(NOTES_FILE, "w", encoding="utf-8") as f:
+        json.dump(notes, f, ensure_ascii=False, indent=2)
+
+def delete_note_permanently(note_id):
+    notes = load_notes()
+
+    notes = [
+        note for note in notes
+        if note["id"] != note_id
+    ]
+
+    with open(NOTES_FILE, "w", encoding="utf-8") as f:
+        json.dump(notes, f, ensure_ascii=False, indent=2)
 
 if st.button("Save"):
     save_note(title, content)
@@ -41,6 +64,11 @@ if st.button("Save"):
 st.divider()
 
 st.header("My notes")
+
+view_mode = st.radio(
+    "View",
+    ["Active notes", "Archived notes", "All notes"]
+)
 
 search = st.text_input("Search", placeholder="Search by title or content...")
 
@@ -51,7 +79,20 @@ filtered_notes = [
     if search.lower() in note["title"].lower() or search.lower() in note["content"].lower()
 ] if search else notes
 
+if view_mode == "Active notes":
+    filtered_notes = [note for note in filtered_notes if note.get("status", "active") == "active"]
+elif view_mode == "Archived notes":
+    filtered_notes = [note for note in filtered_notes if note.get("status", "active") == "archived"]
+
 for note in reversed(filtered_notes):
     st.subheader(note["title"])
     st.caption(note.get("created_at", "—"))
     st.write(note["content"])
+    if note.get("status", "active") == "active":
+        if st.button("Archive", key=f"archive_{note['id']}"):
+            archive_note(note["id"])
+            st.rerun()
+
+    if st.button("Delete permanently", key=f"delete_{note['id']}"):
+        delete_note_permanently(note["id"])
+        st.rerun()
